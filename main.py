@@ -1,10 +1,12 @@
+from datetime import date
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
+from sqlalchemy.sql.expression import text
 
-from session import app
+import models
 
-print(app)
-session = scoped_session(sessionmaker())
+session: Session = scoped_session(sessionmaker())
 
 
 def pg_url():
@@ -16,5 +18,19 @@ def init_session():
     session.configure(bind=engine)
 
 
-def create_table():
+def create_tables():
     session.execute("""CREATE TABLE names (name text)""")
+    session.commit()
+    models.Base.metadata.create_all(bind=session.bind)
+
+
+def create_records():
+    session.add(models.Person(name="Rob", date_of_birth=date(1980, 8, 22)))
+    session.add(models.Person(name="Old Rob", date_of_birth=date(1960, 8, 22)))
+    session.commit()
+
+
+def query_with_age():
+    session.query(models.Person, text("age")).from_statement(
+        text("SELECT person.*, age(date_of_birth) as age FROM person")
+    ).all()
